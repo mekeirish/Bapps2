@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GitHub PWA Launcher</title>
+  
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(180deg, #090d16 0%, #020617 100%);
+      --surface: rgba(255, 255, 255, 0.03);
+      --surface-hover: rgba(255, 255, 255, 0.08);
+      --border: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #94a3b8;
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --rose: #f43f5e;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-touch-callout: none; user-select: none; }
+
+    body {
+      background-color: #050508;
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .smartphone-screen {
+      width: 100vw;
+      height: 100vh;
+      max-width: 480px;
+      max-height: 920px;
+      background: var(--bg-gradient);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @media (min-width: 480px) {
+      .smartphone-screen {
+        border-radius: 40px;
+        box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(56, 189, 248, 0.1);
+        border: 1px solid var(--border);
+      }
+    }
+
+    .view { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .hidden { display: none !important; }
+
+    #authView { padding: 24px; align-items: center; justify-content: center; text-align: center; }
+    .auth-icon-box {
+      width: 64px; height: 64px; border-radius: 16px;
+      background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: #38bdf8;
+    }
+    h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; color: #fff; }
+    p.subtitle { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 24px; line-height: 1.4; }
+
+    .input-group { position: relative; width: 100%; margin-bottom: 12px; }
+    input[type="password"] {
+      width: 100%; padding: 10px 70px 10px 14px;
+      background-color: rgba(3, 7, 18, 0.8); border: 1px solid #1e293b;
+      border-radius: 12px; color: #fff; font-size: 0.875rem; outline: none; transition: border-color 0.2s;
+    }
+    input[type="password"]:focus { border-color: #38bdf8; }
+
+    .btn-paste {
+      position: absolute; right: 6px; top: 6px; bottom: 6px; padding: 0 10px;
+      background: #1e293b; border: none; border-radius: 8px; color: #cbd5e1; font-size: 0.75rem; cursor: pointer;
+    }
+    .btn-paste:hover { background: #334155; }
+
+    .btn-primary {
+      width: 100%; padding: 10px; background-color: var(--accent); border: none;
+      border-radius: 12px; color: #fff; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s;
+    }
+    .btn-primary:hover { background-color: var(--accent-hover); }
+    .error-msg { font-size: 0.75rem; color: var(--rose); height: 16px; margin-top: 8px; }
+
+    .status-bar {
+      padding: 16px 24px 12px 24px; display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); background: #090d16; flex-shrink: 0;
+    }
+    .badge {
+      font-size: 0.625rem; background: rgba(56, 189, 248, 0.1); color: #38bdf8;
+      padding: 2px 8px; border-radius: 9999px; border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+    .badge-sync {
+      background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);
+      animation: pulse-badge 1s infinite alternate;
+    }
+    @keyframes pulse-badge { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    .sync-indicator { font-size: 0.65rem; color: #facc15; margin-right: 8px; display: none; }
+    .btn-link { background: none; border: none; color: var(--text-muted); font-size: 0.6875rem; text-decoration: underline; cursor: pointer; }
+    .btn-link:hover { color: #fff; }
+
+    .search-bar-container {
+      padding: 10px 20px 0 20px;
+      flex-shrink: 0;
+    }
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      background-color: rgba(3, 7, 18, 0.8);
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.75rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: #38bdf8; }
+
+    .grid-container {
+      flex: 1; padding: 20px; overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch; overscroll-behavior: contain; min-height: 0;
+    }
+    .app-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 12px; justify-items: center; padding-bottom: 24px; }
+    
+    .app-item {
+      display: flex; flex-direction: column; align-items: center; width: 68px; text-decoration: none;
+      content-visibility: auto; contain: layout paint; cursor: pointer; position: relative;
+    }
+    .app-icon-box {
+      width: 68px; height: 68px; border-radius: 18px; background: var(--surface);
+      border: 1px solid var(--border); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+      display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 6px;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .app-item:active .app-icon-box { transform: scale(0.9); background: var(--surface-hover); }
+    .app-icon-box img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    .app-name {
+      font-size: 0.625rem; color: #cbd5e1; text-align: center; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
+    }
+
+    .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 192px; gap: 12px; }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid rgba(56, 189, 248, 0.2);
+      border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .bottom-bar {
+      padding: 12px 20px; border-top: 1px solid var(--border); background: rgba(3, 7, 18, 0.6);
+      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+    }
+    .footer-sig { font-size: 0.625rem; color: #64748b; }
+    .btn-secondary {
+      padding: 4px 10px; background: rgba(30, 41, 59, 0.8); border: 1px solid #334155;
+      border-radius: 8px; color: #cbd5e1; font-size: 0.6875rem; cursor: pointer;
+    }
+    .btn-secondary:hover { background: #334155; }
+
+    .home-indicator { padding: 4px 0 8px 0; display: flex; justify-content: center; flex-shrink: 0; background: transparent; }
+    .home-bar { width: 128px; height: 4px; background-color: #334155; border-radius: 9999px; }
+
+    #internalToast {
+      position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: #1e293b; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 0.75rem;
+      border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 1000; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+      opacity: 0; pointer-events: none; max-width: 90%; text-align: center;
+    }
+    #internalToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    dialog {
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; color: var(--text-main);
+      width: 92%; max-width: 440px; max-height: 85vh; padding: 20px; margin: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); display: none; flex-direction: column;
+    }
+    dialog[open] { display: flex; }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
+
+    .modal-title { font-size: 1rem; font-weight: 700; color: #38bdf8; margin-bottom: 4px; }
+    .modal-desc { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 16px; }
+
+    .others-list, .files-list {
+      flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; max-height: 50vh; padding-right: 4px;
+    }
+    .other-item, .file-item {
+      padding: 10px 12px; border-radius: 10px; background: rgba(3, 7, 18, 0.5);
+      border: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .other-info, .file-info { overflow: hidden; flex: 1; cursor: pointer; }
+    .other-name, .file-name { font-size: 0.75rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .other-sub { font-size: 0.65rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .btn-open, .btn-action {
+      padding: 4px 10px; background: var(--accent); border: none; border-radius: 6px;
+      color: #fff; font-size: 0.6875rem; text-decoration: none; flex-shrink: 0; cursor: pointer;
+    }
+    .btn-action-danger { background: var(--rose); }
+    .btn-action-danger:hover { background: #e11d48; }
+
+    .editor-modal { max-width: 460px; height: 88vh; }
+    .editor-section-title { font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    
+    .toolbar-box { background: rgba(15, 23, 42, 0.6); border: 1px solid #1e293b; border-radius: 10px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .toolbar-row { display: flex; gap: 6px; width: 100%; }
+    .toolbar-input {
+      flex: 1; padding: 8px 10px; background: rgba(3, 7, 18, 0.9); border: 1px solid #334155;
+      border-radius: 8px; color: #fff; font-size: 0.75rem; outline: none;
+    }
+    .toolbar-input:focus { border-color: var(--accent); }
+
+    .btn-tool {
+      padding: 8px 12px; background: #334155; border: none; border-radius: 8px; color: #fff;
+      font-size: 0.75rem; font-weight: 500; cursor: pointer; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .btn-tool:hover { background: #475569; }
+    .btn-tool-accent { background: var(--accent); }
+    .btn-tool-accent:hover { background: var(--accent-hover); }
+    .btn-tool-success { background: var(--emerald); }
+    .btn-tool-success:hover { background: #059669; }
+
+    textarea.code-textarea {
+      flex: 1; width: 100%; background: #030712; border: 1px solid #1e293b; border-radius: 10px;
+      color: #38bdf8; font-family: monospace; font-size: 0.75rem; padding: 12px; resize: none; outline: none;
+      line-height: 1.4; min-height: 180px;
+    }
+
+    .image-modal { max-width: 420px; align-items: center; text-align: center; }
+    .image-preview-container {
+      width: 100%; max-height: 50vh; background: #030712; border: 1px solid #1e293b; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 16px; padding: 10px;
+    }
+    .image-preview-container img { max-width: 100%; max-height: 45vh; object-fit: contain; border-radius: 6px; }
+  </style>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#252c32">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1320x2868.png">
+<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1206x2622.png">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1290x2796.png">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1179x2556.png">
+<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1284x2778.png">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1170x2532.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1242x2688.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash-828x1792.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1125x2436.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash-1242x2208.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash-750x1334.png">
+<link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash-640x1136.png">
+</head>
+<body>
+
+  <div class="smartphone-screen">
+
+    <div id="internalToast">Notification interne</div>
+
+    <!-- VUE 1 : SAISIE TOKEN -->
+    <div id="authView" class="view">
+      <div class="auth-icon-box">
+        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+        </svg>
+      </div>
+      <h1>GitHub PWA Launcher</h1>
+      <p class="subtitle">Entrez votre token d'accès personnel pour charger vos applications hébergées.</p>
+      
+      <div style="width: 100%;">
+        <div class="input-group">
+          <input type="password" id="githubToken" placeholder="ghp_..." />
+          <button class="btn-paste" onclick="pasteToken()">Coller</button>
+        </div>
+        <button class="btn-primary" onclick="handleLogin()">Connexion</button>
+        <div id="authError" class="error-msg"></div>
+      </div>
+    </div>
+
+    <!-- VUE 2 : ÉCRAN PRINCIPAL -->
+    <div id="mainView" class="view hidden">
+      <div class="status-bar">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="clock" style="color: #fff; font-weight: 600;">12:00</span>
+          <span class="badge" id="repoCountBadge">0 PWA</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="syncIndicator" class="sync-indicator">Mise à jour…</span>
+          <button class="btn-link" onclick="logout()">Déconnexion</button>
+          <div style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--emerald);"></div>
+        </div>
+      </div>
+
+      <div class="search-bar-container">
+        <input type="text" id="repoSearchInput" class="search-input" placeholder="🔍 Rechercher un repo (filtre intelligent)..." oninput="filterRepos()" />
+      </div>
+
+      <div class="grid-container">
+        <div id="loadingState" class="loading-container">
+          <div class="spinner"></div>
+          <p style="font-size: 0.75rem; color: var(--text-muted);">Analyse de vos dépôts GitHub...</p>
+        </div>
+
+        <div id="appGrid" class="app-grid"></div>
+      </div>
+
+      <div class="bottom-bar">
+        <span class="footer-sig">Made by Laiche Brahim 2026 Paris</span>
+        <button class="btn-secondary" onclick="openOthersModal()">
+          Autres (<span id="otherCount">0</span>)
+        </button>
+      </div>
+    </div>
+
+    <div class="home-indicator">
+      <div class="home-bar"></div>
+    </div>
+  </div>
+
+  <!-- MODAL AUTRES -->
+  <dialog id="othersModal">
+    <div class="modal-title">Autres Dépôts & Pages</div>
+    <div class="modal-desc">Dépôts sans icône <code style="color:#cbd5e1">icon.png</code> ou autres projets détectés. (Appui long sur un nom pour voir ses fichiers)</div>
+    <div id="othersList" class="others-list"></div>
+    <div class="modal-action" style="margin-top:16px;">
+      <button class="btn-primary" onclick="document.getElementById('othersModal').close()">Fermer</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL LISTE DES FICHIERS -->
+  <dialog id="filesModal">
+    <div class="modal-title" id="filesModalTitle">Fichiers du dépôt</div>
+    <div class="modal-desc">Appuyez sur un fichier pour l'éditer ou l'afficher.</div>
+    <div id="filesList" class="files-list"></div>
+    
+    <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #1e293b; display: flex; gap: 8px; flex-shrink: 0;">
+      <button class="btn-tool" style="flex: 1; background: var(--accent); justify-content: center;" onclick="copyRepoLink()">🔗 Link</button>
+      <button id="btnDeleteRepo" class="btn-tool" style="flex: 1.5; background: var(--rose); justify-content: center;" onclick="confirmDeleteRepo()">🗑️ Supprimer</button>
+    </div>
+
+    <div class="modal-action" style="margin-top:12px; flex-shrink: 0;">
+      <button class="btn-primary" onclick="document.getElementById('filesModal').close()">Fermer</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL ÉDITEUR DE CODE MOBILE-FIRST -->
+  <dialog id="editorModal" class="editor-modal">
+    <div class="modal-title" id="editorFileName">Édition de fichier</div>
+    <div class="modal-desc" id="editorFilePath" style="font-family: monospace;">chemin/fichier</div>
+    
+    <div class="toolbar-box">
+      <div class="editor-section-title">Recherche & Remplacement</div>
+      <div class="toolbar-row">
+        <input type="text" id="findInput" class="toolbar-input" placeholder="Mot recherché..." />
+        <button class="btn-tool btn-tool-accent" onclick="findNextWord()">Suivant</button>
+      </div>
+      <div class="toolbar-row">
+        <input type="text" id="replaceInput" class="toolbar-input" placeholder="Remplacer par..." />
+        <button class="btn-tool" onclick="replaceWord()">Remplacer</button>
+        <button class="btn-tool" onclick="replaceAllWords()">Tout</button>
+      </div>
+    </div>
+
+    <div class="toolbar-box" style="padding: 8px 10px;">
+      <div class="toolbar-row">
+        <button class="btn-tool" style="flex:1;" onclick="copyCodeContent()">📋 Copier</button>
+        <button class="btn-tool" style="flex:1;" onclick="pasteCodeContent()">📥 Coller</button>
+      </div>
+    </div>
+
+    <textarea id="codeTextarea" class="code-textarea" spellcheck="false"></textarea>
+
+    <div style="display: flex; gap: 8px; margin-top: 12px; flex-shrink: 0;">
+      <button class="btn-tool" style="flex: 1; background: #1e293b;" onclick="document.getElementById('editorModal').close()">Annuler</button>
+      <button class="btn-tool btn-tool-success" style="flex: 1.5;" onclick="saveFileCommit()">💾 Enregistrer & Commit</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL VISUALISEUR ET REMPLACEUR D'IMAGE -->
+  <dialog id="imageModal" class="image-modal">
+    <div class="modal-title" id="imageModalTitle">Visualisation d'image</div>
+    <div class="modal-desc" id="imageModalPath">image.png</div>
+    
+    <div class="image-preview-container">
+      <img id="imagePreviewTag" src="" alt="Aperçu" />
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+      <input type="file" id="imageReplaceInput" accept="image/*" style="display: none;" onchange="handleImageReplacement(event)" />
+      <button class="btn-primary" onclick="document.getElementById('imageReplaceInput').click()">🖼️ Remplacer l'image (Galerie)</button>
+      <button class="btn-tool" style="background: #1e293b; padding: 10px; width: 100%; justify-content: center;" onclick="document.getElementById('imageModal').close()">Fermer</button>
+    </div>
+  </dialog>
+
+  <script>
+    function showToast(message, duration = 3000) {
+      const toast = document.getElementById('internalToast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(function() {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const clockEl = document.getElementById('clock');
+      if (clockEl) {
+        clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+    updateClock();
+
+    let clockInterval = setInterval(updateClock, 60000);
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) clearInterval(clockInterval);
+      else { updateClock(); clockInterval = setInterval(updateClock, 60000); }
+    });
+
+    let cachedData = null;
+    let currentActiveRepo = null;
+    let currentEditingFile = null;
+    let currentImageFile = null;
+    let repoDeleteStep = 0;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const savedToken = localStorage.getItem('gh_pages_token');
+      if (savedToken) {
+        const tokenInput = document.getElementById('githubToken');
+        if (tokenInput) tokenInput.value = savedToken;
+        initApp(savedToken);
+      }
+    });
+
+    async function pasteToken() {
+      try {
+        const text = await navigator.clipboard.readText();
+        const tokenInput = document.getElementById('githubToken');
+        if (tokenInput) tokenInput.value = text.trim();
+        showToast("Token collé avec succès.");
+      } catch (err) { showToast("Accès au presse-papier refusé."); }
+    }
+
+    function logout() {
+      localStorage.removeItem('gh_pages_token');
+      localStorage.removeItem('gh_cache_data');
+      const authView = document.getElementById('authView');
+      const mainView = document.getElementById('mainView');
+      const tokenInput = document.getElementById('githubToken');
+      if (authView) authView.classList.remove('hidden');
+      if (mainView) mainView.classList.add('hidden');
+      if (tokenInput) tokenInput.value = '';
+      showToast("Déconnecté avec succès.");
+    }
+
+    function handleLogin() {
+      const tokenInput = document.getElementById('githubToken');
+      const errEl = document.getElementById('authError');
+      if (!tokenInput) return;
+      const token = tokenInput.value.trim();
+      if (errEl) errEl.textContent = "";
+      if (!token) {
+        if (errEl) errEl.textContent = "Veuillez entrer un token valide.";
+        return;
+      }
+      localStorage.setItem('gh_pages_token', token);
+      initApp(token);
+    }
+
+    // Fonction utilitaire sécurisée pour parser du JSON et éviter l'erreur HTMLDOCTYPE
+    async function safeFetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      const contentType = response.headers.get("content-type") || "";
+      
+      if (!response.ok) {
+        if (response.status === 401) throw new Error("401 Unauthorized");
+        let errorMsg = "Erreur HTTP: " + response.status;
+        if (contentType.includes("application/json")) {
+          try {
+            const errJson = await response.json();
+            if (errJson && errJson.message) errorMsg = errJson.message;
+          } catch(e) {}
+        }
+        throw new Error(errorMsg);
+      }
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("Réponse inattendue de l'API GitHub (HTML/Non-JSON).");
+      }
+
+      return await response.json();
+    }
+
+    async function initApp(token) {
+      const authView = document.getElementById('authView');
+      const mainView = document.getElementById('mainView');
+      if (authView) authView.classList.add('hidden');
+      if (mainView) mainView.classList.remove('hidden');
+
+      const cachedString = localStorage.getItem('gh_cache_data');
+      if (cachedString) {
+        try {
+          cachedData = JSON.parse(cachedString);
+          if (cachedData && cachedData.pwas && cachedData.others) {
+            renderUI(cachedData.pwas, cachedData.others);
+            const loadingState = document.getElementById('loadingState');
+            if (loadingState) loadingState.style.display = 'none';
+          }
+        } catch(e) { console.error("Erreur cache", e); }
+      }
+
+      const syncIndicator = document.getElementById('syncIndicator');
+      if (cachedData && syncIndicator) syncIndicator.style.display = 'inline';
+
+      try {
+        const repos = await fetchAllRepos(token);
+        processAndRenderRepos(token, repos);
+      } catch (err) {
+        console.error(err);
+        if (syncIndicator) syncIndicator.style.display = 'none';
+        if (err.message && err.message.includes('401')) {
+          logout();
+          showToast("Token expiré ou invalide.");
+        } else if (!cachedData) {
+          const loadingState = document.getElementById('loadingState');
+          if (loadingState) {
+            loadingState.innerHTML = '<p style="font-size: 0.75rem; color: var(--rose); text-align: center;">Erreur : ' + escapeHtml(err.message || 'Inconnue') + '</p>';
+          }
+        }
+      }
+    }
+
+    async function fetchAllRepos(token) {
+      let repos = []; let page = 1; let fetchMore = true;
+      while (fetchMore) {
+        const url = 'https://api.github.com/user/repos?per_page=100&page=' + page + '&sort=updated';
+        const data = await safeFetchJson(url, {
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        
+        if (!Array.isArray(data) || data.length === 0) {
+          fetchMore = false;
+        } else {
+          repos = repos.concat(data);
+          if (data.length < 100) fetchMore = false;
+          else page++;
+        }
+      }
+      return repos;
+    }
+
+    async function processAndRenderRepos(token, repos) {
+      const existingMeta = cachedData && cachedData.meta ? cachedData.meta : {};
+      const newMeta = {}; const validPwas = []; const otherRepos = [];
+
+      const checkIcon = function(url) {
+        return new Promise(function(resolve) {
+          const img = new Image();
+          img.onload = function() { resolve(url); };
+          img.onerror = function() { resolve(null); };
+          img.src = url;
+        });
+      };
+
+      let index = 0; const concurrency = 8;
+      async function worker() {
+        while (index < repos.length) {
+          const repo = repos[index++];
+          if (!repo || !repo.owner) continue;
+          const owner = repo.owner.login;
+          const repoName = repo.name;
+          const defaultBranch = repo.default_branch || 'main';
+          const pushedKey = repoName + '_' + repo.pushed_at;
+
+          const rawBaseUrl = 'https://raw.githubusercontent.com/' + owner + '/' + repoName + '/' + defaultBranch;
+          const primaryIconUrl = rawBaseUrl + '/icon.png';
+          const fallbackIconUrl = rawBaseUrl + '/icon.png.png';
+          const pageUrl = repo.has_pages ? 'https://' + owner + '.github.io/' + repoName + '/' : null;
+
+          let iconFound = null;
+          if (existingMeta[pushedKey] !== undefined) {
+            iconFound = existingMeta[pushedKey];
+          } else {
+            iconFound = await checkIcon(primaryIconUrl);
+            if (!iconFound) iconFound = await checkIcon(fallbackIconUrl);
+          }
+
+          newMeta[pushedKey] = iconFound;
+
+          const repoItem = {
+            name: repoName,
+            owner: owner,
+            defaultBranch: defaultBranch,
+            description: repo.description || 'Aucune description',
+            url: pageUrl || repo.html_url,
+            html_url: repo.html_url,
+            icon: iconFound
+          };
+
+          if (iconFound && repo.has_pages) validPwas.push(repoItem);
+          else otherRepos.push(repoItem);
+        }
+      }
+
+      const workers = [];
+      for (let i = 0; i < concurrency; i++) workers.push(worker());
+      await Promise.all(workers);
+
+      cachedData = { pwas: validPwas, others: otherRepos, meta: newMeta };
+      localStorage.setItem('gh_cache_data', JSON.stringify(cachedData));
+
+      const syncIndicator = document.getElementById('syncIndicator');
+      if (syncIndicator) syncIndicator.style.display = 'none';
+      renderUI(validPwas, otherRepos);
+    }
+
+    function attachLongPressHandler(element, onLongPress, onClick) {
+      let pressTimer = null;
+      let isLongPress = false;
+      let startX = 0;
+      let startY = 0;
+
+      const startPress = function(e) {
+        isLongPress = false;
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+
+        pressTimer = setTimeout(function() {
+          isLongPress = true;
+          onLongPress();
+        }, 700);
+      };
+
+      const movePress = function(e) {
+        if (!pressTimer) return;
+        const touch = e.touches ? e.touches[0] : e;
+        const moveX = Math.abs(touch.clientX - startX);
+        const moveY = Math.abs(touch.clientY - startY);
+        
+        if (moveX > 8 || moveY > 8) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      };
+
+      const cancelPress = function() {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      };
+
+      element.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+      element.addEventListener('mousedown', startPress);
+      element.addEventListener('touchstart', startPress, { passive: true });
+      element.addEventListener('mousemove', movePress);
+      element.addEventListener('touchmove', movePress, { passive: true });
+      element.addEventListener('mouseup', cancelPress);
+      element.addEventListener('mouseleave', cancelPress);
+      element.addEventListener('touchend', cancelPress);
+
+      if (onClick) {
+        element.addEventListener('click', function() {
+          if (!isLongPress) {
+            onClick();
+          }
+          isLongPress = false;
+        });
+      }
+    }
+
+    function filterRepos() {
+      if (!cachedData || !cachedData.pwas) return;
+      const input = document.getElementById('repoSearchInput');
+      const query = input ? input.value.trim().toLowerCase() : "";
+
+      const filtered = cachedData.pwas.filter(function(pwa) {
+        if (!query) return true;
+        const name = pwa.name.toLowerCase();
+        let qIdx = 0;
+        for (let i = 0; i < name.length && qIdx < query.length; i++) {
+          if (name[i] === query[qIdx]) {
+            qIdx++;
+          }
+        }
+        return qIdx === query.length;
+      });
+
+      renderGridItems(filtered);
+    }
+
+    function renderUI(pwas, others) {
+      const loadingState = document.getElementById('loadingState');
+      const repoCountBadge = document.getElementById('repoCountBadge');
+      const otherCountEl = document.getElementById('otherCount');
+      if (loadingState) loadingState.style.display = 'none';
+      if (repoCountBadge) repoCountBadge.textContent = pwas.length + ' PWA';
+      if (otherCountEl) otherCountEl.textContent = others.length;
+
+      filterRepos();
+      buildOthersModalContent(others);
+    }
+
+    function renderGridItems(pwas) {
+      const grid = document.getElementById('appGrid');
+      if (!grid) return;
+      grid.innerHTML = "";
+
+      if (pwas.length === 0) {
+        grid.innerHTML = '<div style="grid-column: span 4; text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 32px;">Aucune PWA trouvée.</div>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      pwas.forEach(function(pwa) {
+        const a = document.createElement('div');
+        a.className = "app-item";
+
+        attachLongPressHandler(a, 
+          function() { openFilesModal(pwa); }, 
+          function() { window.open(pwa.url, '_blank'); }
+        );
+
+        const iconBox = document.createElement('div');
+        iconBox.className = "app-icon-box";
+        const img = document.createElement('img');
+        img.src = pwa.icon; img.alt = pwa.name; img.loading = "lazy"; img.decoding = "async"; img.width = 68; img.height = 68;
+        iconBox.appendChild(img);
+
+        const span = document.createElement('span');
+        span.className = "app-name";
+        span.textContent = pwa.name;
+
+        a.appendChild(iconBox);
+        a.appendChild(span);
+        fragment.appendChild(a);
+      });
+
+      requestAnimationFrame(function() { grid.appendChild(fragment); });
+    }
+
+    async function openFilesModal(repo) {
+      const othersModal = document.getElementById('othersModal');
+      if (othersModal) othersModal.close();
+
+      currentActiveRepo = repo;
+      repoDeleteStep = 0;
+      const btnDelRepo = document.getElementById('btnDeleteRepo');
+      if (btnDelRepo) {
+        btnDelRepo.textContent = "🗑️ Supprimer";
+        btnDelRepo.style.background = "var(--rose)";
+      }
+
+      const modal = document.getElementById('filesModal');
+      const title = document.getElementById('filesModalTitle');
+      const listContainer = document.getElementById('filesList');
+
+      if (title) title.textContent = 'Fichiers : ' + repo.name;
+      if (listContainer) listContainer.innerHTML = '<div style="text-align:center; padding:12px;"><div class="spinner" style="margin:auto;"></div></div>';
+      if (modal) modal.showModal();
+
+      const token = localStorage.getItem('gh_pages_token');
+      try {
+        const treeUrl = 'https://api.github.com/repos/' + repo.owner + '/' + repo.name + '/git/trees/' + repo.defaultBranch + '?recursive=1';
+        const data = await safeFetchJson(treeUrl, {
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        const files = data.tree ? data.tree.filter(function(item) { return item.type === 'blob'; }) : [];
+
+        if (listContainer) listContainer.innerHTML = "";
+        if (files.length === 0) {
+          if (listContainer) listContainer.innerHTML = '<p style="font-size:0.75rem; color:var(--text-muted); text-align:center;">Aucun fichier trouvé.</p>';
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        files.forEach(function(file) {
+          const item = document.createElement('div');
+          item.className = "file-item";
+
+          const info = document.createElement('div');
+          info.className = "file-info";
+          
+          const isImage = /\.(png|jpe?g|gif|webp|svg|ico)$/i.test(file.path);
+          info.onclick = function() {
+            if (isImage) {
+              openImageViewer(repo, file);
+            } else {
+              openFileEditor(repo, file);
+            }
+          };
+
+          const name = document.createElement('div');
+          name.className = "file-name";
+          name.textContent = file.path;
+          info.appendChild(name);
+
+          const btnDel = document.createElement('button');
+          btnDel.className = "btn-action btn-action-danger";
+          btnDel.textContent = "Supprimer";
+          let confirmState = false;
+          btnDel.onclick = function(e) {
+            e.stopPropagation();
+            if (!confirmState) {
+              confirmState = true;
+              btnDel.textContent = "Confirmer ?";
+              setTimeout(function() { confirmState = false; btnDel.textContent = "Supprimer"; }, 3000);
+            } else {
+              deleteFile(repo, file.path, item);
+            }
+          };
+
+          item.appendChild(info);
+          item.appendChild(btnDel);
+          fragment.appendChild(item);
+        });
+        if (listContainer) listContainer.appendChild(fragment);
+
+      } catch (err) {
+        if (listContainer) {
+          listContainer.innerHTML = '<p style="font-size:0.75rem; color: var(--rose); text-align:center;">Erreur : ' + escapeHtml(err.message || 'Inconnue') + '</p>';
+        }
+      }
+    }
+
+    async function copyRepoLink() {
+      if (!currentActiveRepo) return;
+      const linkToCopy = currentActiveRepo.url;
+      try {
+        await navigator.clipboard.writeText(linkToCopy);
+        showToast("Lien copié dans le presse-papier !");
+      } catch (err) {
+        showToast("Échec de la copie du lien.");
+      }
+    }
+
+    async function confirmDeleteRepo() {
+      if (!currentActiveRepo) return;
+      const btnDelRepo = document.getElementById('btnDeleteRepo');
+      if (!btnDelRepo) return;
+
+      if (repoDeleteStep === 0) {
+        repoDeleteStep = 1;
+        btnDelRepo.textContent = "⚠️ Sûr ? (Re-cliquer)";
+        btnDelRepo.style.background = "#b91c1c";
+        setTimeout(function() {
+          if (repoDeleteStep === 1) {
+            repoDeleteStep = 0;
+            btnDelRepo.textContent = "🗑️ Supprimer";
+            btnDelRepo.style.background = "var(--rose)";
+          }
+        }, 4000);
+      } else if (repoDeleteStep === 1) {
+        repoDeleteStep = 2;
+        btnDelRepo.textContent = "SUPPRESSION...";
+        await deleteEntireRepository(currentActiveRepo);
+      }
+    }
+
+    async function deleteEntireRepository(repo) {
+      const token = localStorage.getItem('gh_pages_token');
+      const filesModal = document.getElementById('filesModal');
+      if (filesModal) filesModal.close();
+
+      showToast('Suppression du dépôt ' + repo.name + '...');
+      try {
+        const res = await fetch('https://api.github.com/repos/' + repo.owner + '/' + repo.name, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        if (!res.ok && res.status !== 204) {
+          throw new Error('Échec de la suppression du dépôt (' + res.status + ')');
+        }
+
+        showToast("Dépôt supprimé avec succès !");
+        localStorage.removeItem('gh_cache_data');
+        initApp(token);
+      } catch (err) {
+        showToast("Erreur : " + (err.message || 'Inconnue'));
+      }
+    }
+
+    async function deleteFile(repo, filePath, domElement) {
+      const token = localStorage.getItem('gh_pages_token');
+      try {
+        const fileUrl = 'https://api.github.com/repos/' + repo.owner + '/' + repo.name + '/contents/' + filePath;
+        const fileData = await safeFetchJson(fileUrl, {
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        const delRes = await fetch(fileUrl, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'Suppression de ' + filePath + ' via PWA Launcher', sha: fileData.sha })
+        });
+
+        if (!delRes.ok) throw new Error("Échec de la suppression.");
+        if (domElement) domElement.remove();
+        showToast("Fichier supprimé avec succès.");
+      } catch (err) {
+        showToast("Erreur de suppression : " + (err.message || 'Inconnue'));
+      }
+    }
+
+    async function openImageViewer(repo, file) {
+      currentImageFile = file;
+      const modal = document.getElementById('imageModal');
+      const modalPath = document.getElementById('imageModalPath');
+      const previewImg = document.getElementById('imagePreviewTag');
+      if (modalPath) modalPath.textContent = file.path;
+      if (previewImg) previewImg.src = 'https://raw.githubusercontent.com/' + repo.owner + '/' + repo.name + '/' + repo.defaultBranch + '/' + file.path + '?t=' + Date.now();
+      if (modal) modal.showModal();
+    }
+
+    async function waitForDeployment(repo, filePath) {
+      const token = localStorage.getItem('gh_pages_token');
+      const maxTime = 55000; 
+      const interval = 5000; 
+      let elapsed = 0;
+
+      while (elapsed < maxTime) {
+        await new Promise(function(r) { setTimeout(r, interval); });
+        elapsed += interval;
+        try {
+          const res = await fetch('https://raw.githubusercontent.com/' + repo.owner + '/' + repo.name + '/' + repo.defaultBranch + '/' + filePath + '?t=' + Date.now(), {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (res.ok) {
+            const text = await res.text();
+            if (text && text.length > 0) return true;
+          }
+        } catch(e) {}
+      }
+      return false;
+    }
+
+    async function handleImageReplacement(event) {
+      const fileInput = event.target;
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) return;
+      const newImgFile = fileInput.files[0];
+      const repo = currentActiveRepo;
+      const file = currentImageFile;
+      const token = localStorage.getItem('gh_pages_token');
+      if (!repo || !file) return;
+
+      const imageModal = document.getElementById('imageModal');
+      const filesModal = document.getElementById('filesModal');
+      if (imageModal) imageModal.close();
+      if (filesModal) filesModal.close();
+
+      const badge = document.getElementById('repoCountBadge');
+      const originalBadgeText = badge ? badge.textContent : "0 PWA";
+      if (badge) {
+        badge.textContent = "COMMIT EN COURS...";
+        badge.className = "badge badge-sync";
+      }
+      showToast("Mise en ligne et propagation du commit (env. 50s)...");
+
+      try {
+        const reader = new FileReader();
+        reader.onload = async function() {
+          try {
+            const base64Content = reader.result.split(',')[1];
+            const fileUrl = 'https://api.github.com/repos/' + repo.owner + '/' + repo.name + '/contents/' + file.path;
+
+            const fileData = await safeFetchJson(fileUrl, {
+              headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+            });
+
+            const putRes = await fetch(fileUrl, {
+              method: 'PUT',
+              headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                message: "Remplacement de l'image " + file.path + " via PWA Launcher",
+                content: base64Content,
+                sha: fileData.sha
+              })
+            });
+
+            if (!putRes.ok) throw new Error("Échec du remplacement de l'image.");
+
+            if (badge) badge.textContent = "VÉRIFICATION...";
+            showToast("Commit effectué. Attente de la synchronisation GitHub...");
+
+            await waitForDeployment(repo, file.path);
+
+            if (badge) {
+              badge.textContent = originalBadgeText;
+              badge.className = "badge";
+            }
+            showToast("Image remplacée, commitée et vérifiée avec succès !");
+          } catch (innerErr) {
+            if (badge) {
+              badge.textContent = originalBadgeText;
+              badge.className = "badge";
+            }
+            showToast("Erreur : " + (innerErr.message || 'Inconnue'));
+          }
+        };
+        reader.readAsDataURL(newImgFile);
+      } catch (err) {
+        if (badge) {
+          badge.textContent = originalBadgeText;
+          badge.className = "badge";
+        }
+        showToast("Erreur : " + (err.message || 'Inconnue'));
+      } finally {
+        fileInput.value = "";
+      }
+    }
+
+    async function openFileEditor(repo, file) {
+      currentEditingFile = file;
+      const modal = document.getElementById('editorModal');
+      const editorFileName = document.getElementById('editorFileName');
+      const editorFilePath = document.getElementById('editorFilePath');
+      const textarea = document.getElementById('codeTextarea');
+
+      if (editorFileName) editorFileName.textContent = file.path;
+      if (editorFilePath) editorFilePath.textContent = repo.owner + '/' + repo.name;
+      if (textarea) textarea.value = "Chargement du contenu...";
+      if (modal) modal.showModal();
+
+      const token = localStorage.getItem('gh_pages_token');
+      try {
+        const fileUrl = 'https://api.github.com/repos/' + repo.owner + '/' + repo.name + '/contents/' + file.path;
+        const data = await safeFetchJson(fileUrl, {
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        const content = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
+        if (textarea) textarea.value = content;
+      } catch (err) {
+        if (textarea) textarea.value = "Erreur : " + (err.message || 'Inconnue');
+      }
+    }
+
+    function findNextWord() {
+      const findInput = document.getElementById('findInput');
+      const textarea = document.getElementById('codeTextarea');
+      if (!findInput || !textarea) return;
+      const term = findInput.value;
+      if (!term) return;
+      const text = textarea.value;
+      const start = textarea.selectionEnd || 0;
+      const index = text.indexOf(term, start);
+      if (index !== -1) {
+        textarea.focus();
+        textarea.setSelectionRange(index, index + term.length);
+      } else {
+        const wrapIndex = text.indexOf(term, 0);
+        if (wrapIndex !== -1) {
+          textarea.focus();
+          textarea.setSelectionRange(wrapIndex, wrapIndex + term.length);
+        }
+      }
+    }
+
+    function replaceWord() {
+      const findInput = document.getElementById('findInput');
+      const replaceInput = document.getElementById('replaceInput');
+      const textarea = document.getElementById('codeTextarea');
+      if (!findInput || !replaceInput || !textarea) return;
+      const term = findInput.value;
+      const replacement = replaceInput.value;
+      if (!term) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end);
+      if (selected === term) {
+        textarea.setRangeText(replacement);
+      } else {
+        findNextWord();
+      }
+    }
+
+    function replaceAllWords() {
+      const findInput = document.getElementById('findInput');
+      const replaceInput = document.getElementById('replaceInput');
+      const textarea = document.getElementById('codeTextarea');
+      if (!findInput || !replaceInput || !textarea) return;
+      const term = findInput.value;
+      const replacement = replaceInput.value;
+      if (!term) return;
+      textarea.value = textarea.value.replaceAll(term, replacement);
+    }
+
+    async function copyCodeContent() {
+      const textarea = document.getElementById('codeTextarea');
+      if (!textarea) return;
+      try {
+        await navigator.clipboard.writeText(textarea.value);
+        showToast("Code copié dans le presse-papier !");
+      } catch(e) { showToast("Échec de la copie."); }
+    }
+
+    async function pasteCodeContent() {
+      try {
+        const text = await navigator.clipboard.readText();
+        const textarea = document.getElementById('codeTextarea');
+        if (textarea) textarea.value = text;
+        showToast("Code collé depuis le presse-papier.");
+      } catch(e) { showToast("Échec du collage."); }
+    }
+
+    async function saveFileCommit() {
+      const repo = currentActiveRepo;
+      const file = currentEditingFile;
+      const textarea = document.getElementById('codeTextarea');
+      if (!repo || !file || !textarea) return;
+      const newContent = textarea.value;
+      const token = localStorage.getItem('gh_pages_token');
+
+      const editorModal = document.getElementById('editorModal');
+      const filesModal = document.getElementById('filesModal');
+      if (editorModal) editorModal.close();
+      if (filesModal) filesModal.close();
+
+      const badge = document.getElementById('repoCountBadge');
+      const originalBadgeText = badge ? badge.textContent : "0 PWA";
+      if (badge) {
+        badge.textContent = "COMMIT EN COURS...";
+        badge.className = "badge badge-sync";
+      }
+      showToast("Enregistrement et commit en cours (env. 50s)...");
+
+      try {
+        const fileUrl = 'https://api.github.com/repos/' + repo.owner + '/' + repo.name + '/contents/' + file.path;
+        const fileData = await safeFetchJson(fileUrl, {
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        const encodedContent = btoa(unescape(encodeURIComponent(newContent)));
+
+        const putRes = await fetch(fileUrl, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: 'Mise à jour de ' + file.path + ' via PWA Launcher',
+            content: encodedContent,
+            sha: fileData.sha
+          })
+        });
+
+        if (!putRes.ok) throw new Error("Échec du commit.");
+
+        if (badge) badge.textContent = "VÉRIFICATION...";
+        showToast("Commit validé. Attente de la mise à jour GitHub (50s)...");
+
+        await waitForDeployment(repo, file.path);
+
+        if (badge) {
+          badge.textContent = originalBadgeText;
+          badge.className = "badge";
+        }
+        showToast("Mise à jour entièrement vérifiée et prête !");
+
+      } catch (err) {
+        if (badge) {
+          badge.textContent = originalBadgeText;
+          badge.className = "badge";
+        }
+        showToast("Erreur : " + (err.message || 'Inconnue'));
+      }
+    }
+
+    function buildOthersModalContent(others) {
+      const container = document.getElementById('othersList');
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (!others || others.length === 0) {
+        container.innerHTML = '<p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 16px;">Aucun autre dépôt répertorié.</p>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      others.forEach(function(repo) {
+        const item = document.createElement('div');
+        item.className = "other-item";
+
+        const info = document.createElement('div');
+        info.className = "other-info";
+
+        attachLongPressHandler(info,
+          function() { openFilesModal(repo); },
+          function() { window.open(repo.url, '_blank'); }
+        );
+
+        const name = document.createElement('div'); name.className = "other-name"; name.textContent = repo.name;
+        const desc = document.createElement('div'); desc.className = "other-sub"; desc.textContent = repo.description;
+        info.appendChild(name); info.appendChild(desc);
+
+        const btn = document.createElement('a');
+        btn.href = repo.url; btn.target = "_blank"; btn.className = "btn-open"; btn.textContent = "Ouvrir";
+
+        item.appendChild(info); item.appendChild(btn);
+        fragment.appendChild(item);
+      });
+      container.appendChild(fragment);
+    }
+
+    function openOthersModal() {
+      const modal = document.getElementById('othersModal');
+      if (modal) modal.showModal();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+<script>
+if ('serviceWorker' in navigator) {
+window.addEventListener('load',()=>{
+navigator.serviceWorker.register('./sw.js').catch(err=>console.error(err));
+});
+}
+</script>
+</body>
+</html>
